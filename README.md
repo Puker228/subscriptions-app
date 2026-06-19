@@ -1,1 +1,1 @@
-# effective-mobile-test-task
+# subscriptions-app
