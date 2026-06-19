@@ -1,0 +1,64 @@
+.PHONY: build run run-bin start release test fmt build-all clean-apps docker-build docker-run docker-up docker-down docker-logs docker-gen-sqlc gen-sqlc
+
+APP := subscriptions-app
+CMD := ./cmd/app
+DIST_DIR := dist
+LDFLAGS := -s -w
+DOCKER_IMAGE := subscriptions-app:latest
+DOCKER_COMPOSE := docker compose
+
+build:
+	CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(APP) $(CMD)
+
+run:
+	go run $(CMD)
+
+run-bin:
+	./$(APP)
+
+start: build
+	./$(APP)
+
+release: build
+	./$(APP)
+
+test:
+	go test ./...
+
+fmt:
+	gofmt -w cmd internal
+
+clean-apps:
+	rm -f $(APP)
+	rm -rf $(DIST_DIR)/
+
+gen-sqlc:
+	sqlc generate
+
+docker-build:
+	docker build -t $(DOCKER_IMAGE) .
+
+docker-run: docker-build
+	docker run --rm -p 8800:8800 -v subscriptions-app-data:/data $(DOCKER_IMAGE)
+
+docker-up:
+	$(DOCKER_COMPOSE) up -d --build
+
+docker-down:
+	$(DOCKER_COMPOSE) down
+
+docker-logs:
+	$(DOCKER_COMPOSE) logs -f subscriptions-app
+
+docker-gen-sqlc:
+	docker run --rm -v $(PWD):/src -w /src sqlc/sqlc generate
+
+$(DIST_DIR):
+	mkdir -p $(DIST_DIR)
+
+build-all: $(DIST_DIR)
+	GOOS=darwin  GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-darwin-amd64   $(CMD)
+	GOOS=darwin  GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-darwin-arm64   $(CMD)
+	GOOS=linux   GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-linux-amd64    $(CMD)
+	GOOS=linux   GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-linux-arm64    $(CMD)
+	GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags="$(LDFLAGS)" -o $(DIST_DIR)/$(APP)-windows-amd64.exe $(CMD)
