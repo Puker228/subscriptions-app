@@ -26,7 +26,7 @@ test:
 	go test ./...
 
 fmt:
-	gofmt -w cmd internal
+	gofmt -w .
 
 clean-apps:
 	rm -f $(APP)

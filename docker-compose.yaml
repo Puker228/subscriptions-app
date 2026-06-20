@@ -4,16 +4,5 @@ services:
       context: .
     image: subscriptions-app:latest
     container_name: subscriptions-app
-    restart: always
     ports:
       - "8800:8800"
-    environment:
-      NOTES_DB_PATH: /data/db/notes.db
-      NOTES_UPLOADS_PATH: /data/uploads
-      NOTES_LOG_PATH: /data/logs/subscriptions-app.log
-      NOTES_BACKUP_PATH: /data/backups
-    volumes:
-      - subscriptions-app-data:/data
-
-volumes:
-  subscriptions-app-data:

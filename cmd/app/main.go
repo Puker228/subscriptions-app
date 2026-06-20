@@ -1,8 +1,7 @@
 package main
 
 import (
-	"net/http"
-
+	"github.com/Puker228/subscriptions-app/internal/subscriptions"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )
@@ -13,11 +12,12 @@ func main() {
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
 
-	e.GET("/", func(c *echo.Context) error {
-		return c.JSON(http.StatusOK, map[string]string{"message": "Hello, World!"})
-	})
+	h := subscriptions.Handler{}
 
-	if err := e.Start(":1323"); err != nil {
+	apiV1 := e.Group("/api/v1")
+	apiV1.GET("/", h.Hello)
+
+	if err := e.Start(":8800"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
 	}
 }
