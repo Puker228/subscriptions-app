@@ -38,3 +38,15 @@ services:
       - POSTGRES_DB=${POSTGRES_DB?Variable not set}
     networks:
       - subscriptions_app_network
+
+  migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile.migrate
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    networks:
+      - subscriptions_app_network
