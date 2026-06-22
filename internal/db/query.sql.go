@@ -11,7 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const createSubscription = `-- name: CreateSubscription :one
+const createSubscription = `-- name: CreateSubscription :exec
 INSERT INTO subscriptions (
     id,
     service_name,
@@ -22,7 +22,6 @@ INSERT INTO subscriptions (
 ) VALUES (
     $1, $2, $3, $4, $5, $6
 )
-RETURNING id, service_name, price, user_id, start_date, end_date
 `
 
 type CreateSubscriptionParams struct {
@@ -34,8 +33,8 @@ type CreateSubscriptionParams struct {
 	EndDate     pgtype.Date
 }
 
-func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) (Subscription, error) {
-	row := q.db.QueryRow(ctx, createSubscription,
+func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscriptionParams) error {
+	_, err := q.db.Exec(ctx, createSubscription,
 		arg.ID,
 		arg.ServiceName,
 		arg.Price,
@@ -43,16 +42,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		arg.StartDate,
 		arg.EndDate,
 	)
-	var i Subscription
-	err := row.Scan(
-		&i.ID,
-		&i.ServiceName,
-		&i.Price,
-		&i.UserID,
-		&i.StartDate,
-		&i.EndDate,
-	)
-	return i, err
+	return err
 }
 
 const deleteSubscription = `-- name: DeleteSubscription :exec
@@ -84,7 +74,7 @@ func (q *Queries) GetSubscription(ctx context.Context, id pgtype.UUID) (Subscrip
 	return i, err
 }
 
-const updateSubscription = `-- name: UpdateSubscription :one
+const updateSubscription = `-- name: UpdateSubscription :exec
 UPDATE subscriptions
 SET
     service_name = $2,
@@ -105,8 +95,8 @@ type UpdateSubscriptionParams struct {
 	EndDate     pgtype.Date
 }
 
-func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) (Subscription, error) {
-	row := q.db.QueryRow(ctx, updateSubscription,
+func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscriptionParams) error {
+	_, err := q.db.Exec(ctx, updateSubscription,
 		arg.ID,
 		arg.ServiceName,
 		arg.Price,
@@ -114,14 +104,5 @@ func (q *Queries) UpdateSubscription(ctx context.Context, arg UpdateSubscription
 		arg.StartDate,
 		arg.EndDate,
 	)
-	var i Subscription
-	err := row.Scan(
-		&i.ID,
-		&i.ServiceName,
-		&i.Price,
-		&i.UserID,
-		&i.StartDate,
-		&i.EndDate,
-	)
-	return i, err
+	return err
 }

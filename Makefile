@@ -27,6 +27,7 @@ test:
 
 fmt:
 	gofmt -w .
+	goimports -w .
 
 clean-apps:
 	rm -f $(APP)

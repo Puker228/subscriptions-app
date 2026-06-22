@@ -2,7 +2,7 @@
 SELECT * FROM subscriptions
 WHERE id = $1 LIMIT 1;
 
--- name: CreateSubscription :one
+-- name: CreateSubscription :exec
 INSERT INTO subscriptions (
     id,
     service_name,
@@ -12,10 +12,9 @@ INSERT INTO subscriptions (
     end_date
 ) VALUES (
     $1, $2, $3, $4, $5, $6
-)
-RETURNING *;
+);
 
--- name: UpdateSubscription :one
+-- name: UpdateSubscription :exec
 UPDATE subscriptions
 SET
     service_name = $2,
