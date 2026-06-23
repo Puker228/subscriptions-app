@@ -56,12 +56,13 @@ func (s *Service) Update(ctx context.Context, sub Subscription) error {
 
 	return s.r.Update(ctx, sub)
 }
+
 func (s *Service) Delete(ctx context.Context, ID uuid.UUID) error {
 	if ID == uuid.Nil {
 		return ErrInvalidUserID
 	}
 
-	return s.Delete(ctx, ID)
+	return s.r.Delete(ctx, ID)
 }
 
 func validateSubscription(sub Subscription) error {

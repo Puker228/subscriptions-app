@@ -15,7 +15,10 @@ func main() {
 	h := subscriptions.Handler{}
 
 	apiV1 := e.Group("/api/v1")
-	apiV1.GET("/", h.Hello)
+	apiV1.POST("/sub", h.Create)
+	apiV1.GET("/sub/:id", h.GetOneByID)
+	apiV1.PUT("/sub", h.Update)
+	apiV1.DELETE("/sub/:id", h.Delete)
 
 	if err := e.Start(":8800"); err != nil {
 		e.Logger.Error("failed to start server", "error", err)
