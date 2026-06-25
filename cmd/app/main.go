@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"log"
 	"os"
 
 	"github.com/Puker228/subscriptions-app/internal/subscriptions"
@@ -28,7 +29,7 @@ func main() {
 	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	if err := godotenv.Load(); err != nil {
-		e.Logger.Warn("failed to load .env file", "error", err)
+		log.Println("env not loaded:", err)
 	}
 
 	ctx := context.Background()
@@ -37,21 +38,24 @@ func main() {
 		dbURL = os.Getenv("GOOSE_DBSTRING")
 	}
 	if dbURL == "" {
-		e.Logger.Error("DATABASE_URL or GOOSE_DBSTRING is required")
+		log.Println("DATABASE_URL or GOOSE_DBSTRING is empty")
 		os.Exit(1)
 	}
 
+	log.Println("db config ok")
+
 	pool, err := pgxpool.New(ctx, dbURL)
 	if err != nil {
-		e.Logger.Error("failed to create database pool", "error", err)
+		log.Println("db pool error:", err)
 		os.Exit(1)
 	}
 	if err := pool.Ping(ctx); err != nil {
-		e.Logger.Error("failed to connect to database", "error", err)
+		log.Println("db ping error:", err)
 		pool.Close()
 		os.Exit(1)
 	}
 	defer pool.Close()
+	log.Println("db connected")
 
 	r := subscriptions.NewRepository(pool)
 	s := subscriptions.NewService(r)
@@ -65,7 +69,9 @@ func main() {
 	apiV1.PUT("/sub", h.Update)
 	apiV1.DELETE("/sub/:id", h.Delete)
 
-	if err := e.Start(":8800"); err != nil {
-		e.Logger.Error("failed to start server", "error", err)
+	addr := ":8800"
+	log.Println("starting server on", addr)
+	if err := e.Start(addr); err != nil {
+		log.Println("server error:", err)
 	}
 }

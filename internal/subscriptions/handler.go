@@ -2,6 +2,7 @@ package subscriptions
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -51,6 +52,7 @@ func (h *Handler) List(c *echo.Context) error {
 	if userID := c.QueryParam("user_id"); userID != "" {
 		id, err := uuid.Parse(userID)
 		if err != nil {
+			log.Println("bad user_id in list:", err)
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": "invalid user_id",
 			})
@@ -60,10 +62,10 @@ func (h *Handler) List(c *echo.Context) error {
 
 	result, err := h.s.List(ctx, p)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "failed to list subscriptions",
-		})
+		return h.handleError(c, err, "list", "failed to list subscriptions")
 	}
+
+	log.Printf("list subscriptions total=%d page=%d", result.Total, result.Page)
 
 	return c.JSON(http.StatusOK, result)
 }
@@ -96,6 +98,7 @@ func (h *Handler) Sum(c *echo.Context) error {
 	if userID := c.QueryParam("user_id"); userID != "" {
 		id, err := uuid.Parse(userID)
 		if err != nil {
+			log.Println("bad user_id in sum:", err)
 			return c.JSON(http.StatusBadRequest, map[string]string{
 				"error": "invalid user_id",
 			})
@@ -105,8 +108,10 @@ func (h *Handler) Sum(c *echo.Context) error {
 
 	result, err := h.s.Sum(ctx, p)
 	if err != nil {
-		return h.handleError(c, err, "failed to sum subscriptions")
+		return h.handleError(c, err, "sum", "failed to sum subscriptions")
 	}
+
+	log.Println("sum subscriptions:", result.Total)
 
 	return c.JSON(http.StatusOK, result)
 }
@@ -123,18 +128,22 @@ func (h *Handler) Sum(c *echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /sub [post]
 func (h *Handler) Create(c *echo.Context) error {
+	ctx := c.Request().Context()
 	var sub Subscription
 
 	if err := c.Bind(&sub); err != nil {
+		log.Println("bad create body:", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid request body",
 		})
 	}
 
-	created, err := h.s.Create(c.Request().Context(), sub)
+	created, err := h.s.Create(ctx, sub)
 	if err != nil {
-		return h.handleError(c, err, "failed to create subscription")
+		return h.handleError(c, err, "create", "failed to create subscription")
 	}
+
+	log.Println("created subscription:", created.ID)
 
 	return c.JSON(http.StatusCreated, created)
 }
@@ -152,25 +161,31 @@ func (h *Handler) Create(c *echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /sub/{id} [get]
 func (h *Handler) GetOneByID(c *echo.Context) error {
+	ctx := c.Request().Context()
 	ID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		log.Println("bad id in get:", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid id",
 		})
 	}
 
-	sub, err := h.s.GetOneByID(c.Request().Context(), ID)
+	sub, err := h.s.GetOneByID(ctx, ID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			log.Println("sub not found:", ID)
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "subscription not found",
 			})
 		}
 
+		log.Println("get sub error:", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "failed to get subscription",
 		})
 	}
+
+	log.Println("get subscription:", sub.ID)
 
 	return c.JSON(http.StatusOK, sub)
 }
@@ -188,17 +203,21 @@ func (h *Handler) GetOneByID(c *echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /sub [put]
 func (h *Handler) Update(c *echo.Context) error {
+	ctx := c.Request().Context()
 	var sub Subscription
 
 	if err := c.Bind(&sub); err != nil {
+		log.Println("bad update body:", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid request body",
 		})
 	}
 
-	if err := h.s.Update(c.Request().Context(), sub); err != nil {
-		return h.handleError(c, err, "failed to update subscription")
+	if err := h.s.Update(ctx, sub); err != nil {
+		return h.handleError(c, err, "update", "failed to update subscription")
 	}
+
+	log.Println("updated subscription:", sub.ID)
 
 	return c.NoContent(http.StatusNoContent)
 }
@@ -216,33 +235,40 @@ func (h *Handler) Update(c *echo.Context) error {
 // @Failure 500 {object} ErrorResponse
 // @Router /sub/{id} [delete]
 func (h *Handler) Delete(c *echo.Context) error {
+	ctx := c.Request().Context()
 	ID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
+		log.Println("bad id in delete:", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "invalid id",
 		})
 	}
 
-	if err := h.s.Delete(c.Request().Context(), ID); err != nil {
-		return h.handleError(c, err, "failed to delete subscription")
+	if err := h.s.Delete(ctx, ID); err != nil {
+		return h.handleError(c, err, "delete", "failed to delete subscription")
 	}
+
+	log.Println("deleted subscription:", ID)
 
 	return c.NoContent(http.StatusNoContent)
 }
 
-func (h *Handler) handleError(c *echo.Context, err error, message string) error {
+func (h *Handler) handleError(c *echo.Context, err error, operation string, message string) error {
 	if errors.Is(err, ErrEmptyServiceName) || errors.Is(err, ErrInvalidPrice) || errors.Is(err, ErrInvalidUserID) || errors.Is(err, ErrEmptyStartDate) || errors.Is(err, ErrEmptyEndDate) || errors.Is(err, ErrInvalidDate) || errors.Is(err, ErrInvalidPeriod) {
+		log.Println("bad request in", operation+":", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})
 	}
 
 	if errors.Is(err, pgx.ErrNoRows) {
+		log.Println("not found in", operation+":", err)
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "subscription not found",
 		})
 	}
 
+	log.Println("error in", operation+":", err)
 	return c.JSON(http.StatusInternalServerError, map[string]string{
 		"error": message,
 	})
