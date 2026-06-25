@@ -3,12 +3,12 @@ package subscriptions
 import "github.com/google/uuid"
 
 type Subscription struct {
-	ID          uuid.UUID `json:"id"`
-	ServiceName string    `json:"service_name"`
-	Price       int       `json:"price"`
-	UserID      uuid.UUID `json:"user_id"`
-	StartDate   string    `json:"start_date"`
-	EndDate     *string   `json:"end_date,omitempty"`
+	ID          uuid.UUID `json:"id" swaggertype:"string" format:"uuid" example:"550e8400-e29b-41d4-a716-446655440000"`
+	ServiceName string    `json:"service_name" example:"Netflix"`
+	Price       int       `json:"price" example:"999"`
+	UserID      uuid.UUID `json:"user_id" swaggertype:"string" format:"uuid" example:"550e8400-e29b-41d4-a716-446655440001"`
+	StartDate   string    `json:"start_date" example:"01-2024"`
+	EndDate     *string   `json:"end_date,omitempty" example:"12-2024"`
 }
 
 type ListParams struct {
@@ -22,14 +22,14 @@ type ListParams struct {
 
 type ListResult struct {
 	Subscriptions []Subscription `json:"subscriptions"`
-	Total         int            `json:"total"`
-	Page          int            `json:"page"`
-	PageSize      int            `json:"page_size"`
-	TotalPages    int            `json:"total_pages"`
-	HasPrev       bool           `json:"has_prev"`
-	HasNext       bool           `json:"has_next"`
-	PrevPage      int            `json:"prev_page"`
-	NextPage      int            `json:"next_page"`
+	Total         int            `json:"total" example:"25"`
+	Page          int            `json:"page" example:"1"`
+	PageSize      int            `json:"page_size" example:"10"`
+	TotalPages    int            `json:"total_pages" example:"3"`
+	HasPrev       bool           `json:"has_prev" example:"false"`
+	HasNext       bool           `json:"has_next" example:"true"`
+	PrevPage      int            `json:"prev_page" example:"0"`
+	NextPage      int            `json:"next_page" example:"2"`
 }
 
 type SumParams struct {
@@ -40,5 +40,9 @@ type SumParams struct {
 }
 
 type SumResult struct {
-	Total int `json:"total"`
+	Total int `json:"total" example:"1998"`
+}
+
+type ErrorResponse struct {
+	Error string `json:"error" example:"invalid request body"`
 }

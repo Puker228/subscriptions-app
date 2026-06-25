@@ -9,13 +9,23 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
+	echoSwagger "github.com/swaggo/echo-swagger/v2"
+
+	_ "github.com/Puker228/subscriptions-app/docs"
 )
 
+// @title Subscriptions API
+// @version 1.0
+// @description API для управления подписками.
+// @host localhost:8800
+// @BasePath /api/v1
+// @schemes http
 func main() {
 	e := echo.New()
 
 	e.Use(middleware.RequestLogger())
 	e.Use(middleware.Recover())
+	e.GET("/swagger/*", echoSwagger.WrapHandler)
 
 	if err := godotenv.Load(); err != nil {
 		e.Logger.Warn("failed to load .env file", "error", err)

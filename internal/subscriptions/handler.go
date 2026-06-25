@@ -18,6 +18,22 @@ func NewHandler(s *Service) *Handler {
 	return &Handler{s: s}
 }
 
+// List godoc
+// @Summary Получить список подписок
+// @Description Возвращает список подписок с фильтрацией, сортировкой и пагинацией.
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param service_name query string false "Фильтр по названию сервиса"
+// @Param q query string false "Алиас для service_name"
+// @Param user_id query string false "UUID пользователя"
+// @Param sort query string false "Поле сортировки" Enums(service_name, price, start_date, end_date)
+// @Param order query string false "Направление сортировки" Enums(asc, desc)
+// @Param page query int false "Номер страницы" minimum(1) default(1)
+// @Success 200 {object} ListResult
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sub [get]
 func (h *Handler) List(c *echo.Context) error {
 	ctx := c.Request().Context()
 	p := ListParams{
@@ -52,6 +68,21 @@ func (h *Handler) List(c *echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+// Sum godoc
+// @Summary Посчитать сумму подписок
+// @Description Возвращает суммарную стоимость подписок за период с optional-фильтрами по пользователю и сервису.
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param start_date query string true "Начало периода в формате MM-YYYY"
+// @Param end_date query string true "Конец периода в формате MM-YYYY"
+// @Param service_name query string false "Фильтр по названию сервиса"
+// @Param q query string false "Алиас для service_name"
+// @Param user_id query string false "UUID пользователя"
+// @Success 200 {object} SumResult
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sub/sum [get]
 func (h *Handler) Sum(c *echo.Context) error {
 	ctx := c.Request().Context()
 	p := SumParams{
@@ -80,6 +111,17 @@ func (h *Handler) Sum(c *echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+// Create godoc
+// @Summary Создать подписку
+// @Description Создаёт новую подписку. Если id не передан, он генерируется автоматически.
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param subscription body Subscription true "Данные подписки"
+// @Success 201 {object} Subscription
+// @Failure 400 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sub [post]
 func (h *Handler) Create(c *echo.Context) error {
 	var sub Subscription
 
@@ -97,6 +139,18 @@ func (h *Handler) Create(c *echo.Context) error {
 	return c.JSON(http.StatusCreated, created)
 }
 
+// GetOneByID godoc
+// @Summary Получить подписку по ID
+// @Description Возвращает одну подписку по UUID.
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param id path string true "UUID подписки"
+// @Success 200 {object} Subscription
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sub/{id} [get]
 func (h *Handler) GetOneByID(c *echo.Context) error {
 	ID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -121,6 +175,18 @@ func (h *Handler) GetOneByID(c *echo.Context) error {
 	return c.JSON(http.StatusOK, sub)
 }
 
+// Update godoc
+// @Summary Обновить подписку
+// @Description Обновляет подписку по id из тела запроса.
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param subscription body Subscription true "Данные подписки"
+// @Success 204 "No Content"
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sub [put]
 func (h *Handler) Update(c *echo.Context) error {
 	var sub Subscription
 
@@ -137,6 +203,18 @@ func (h *Handler) Update(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
+// Delete godoc
+// @Summary Удалить подписку
+// @Description Удаляет подписку по UUID.
+// @Tags subscriptions
+// @Accept json
+// @Produce json
+// @Param id path string true "UUID подписки"
+// @Success 204 "No Content"
+// @Failure 400 {object} ErrorResponse
+// @Failure 404 {object} ErrorResponse
+// @Failure 500 {object} ErrorResponse
+// @Router /sub/{id} [delete]
 func (h *Handler) Delete(c *echo.Context) error {
 	ID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
