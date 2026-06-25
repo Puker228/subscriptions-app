@@ -21,6 +21,17 @@ var (
 	ErrInvalidUserID    = errors.New("user id is required")
 )
 
+func (s *Service) List(ctx context.Context, p ListParams) (ListResult, error) {
+	if p.PageSize <= 0 {
+		p.PageSize = 10
+	}
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+
+	return s.r.List(ctx, p)
+}
+
 func (s *Service) Create(ctx context.Context, sub Subscription) (Subscription, error) {
 	if sub.ID == uuid.Nil {
 		sub.ID = uuid.New()

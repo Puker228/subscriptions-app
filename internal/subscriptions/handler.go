@@ -3,6 +3,7 @@ package subscriptions
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,6 +16,40 @@ type Handler struct {
 
 func NewHandler(s *Service) *Handler {
 	return &Handler{s: s}
+}
+
+func (h *Handler) List(c *echo.Context) error {
+	ctx := c.Request().Context()
+	p := ListParams{
+		ServiceName: c.QueryParam("service_name"),
+		Sort:        c.QueryParam("sort"),
+		Order:       c.QueryParam("order"),
+		PageSize:    10,
+	}
+	if p.ServiceName == "" {
+		p.ServiceName = c.QueryParam("q")
+	}
+	if page, err := strconv.Atoi(c.QueryParam("page")); err == nil && page > 0 {
+		p.Page = page
+	}
+	if userID := c.QueryParam("user_id"); userID != "" {
+		id, err := uuid.Parse(userID)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "invalid user_id",
+			})
+		}
+		p.UserID = id
+	}
+
+	result, err := h.s.List(ctx, p)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "failed to list subscriptions",
+		})
+	}
+
+	return c.JSON(http.StatusOK, result)
 }
 
 func (h *Handler) Create(c *echo.Context) error {

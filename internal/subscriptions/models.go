@@ -14,3 +14,24 @@ type Subscription struct {
 	StartDate   time.Time  `json:"start_date"`
 	EndDate     *time.Time `json:"end_date,omitempty"`
 }
+
+type ListParams struct {
+	ServiceName string
+	UserID      uuid.UUID
+	Sort        string
+	Order       string
+	Page        int
+	PageSize    int
+}
+
+type ListResult struct {
+	Subscriptions []Subscription `json:"subscriptions"`
+	Total         int            `json:"total"`
+	Page          int            `json:"page"`
+	PageSize      int            `json:"page_size"`
+	TotalPages    int            `json:"total_pages"`
+	HasPrev       bool           `json:"has_prev"`
+	HasNext       bool           `json:"has_next"`
+	PrevPage      int            `json:"prev_page"`
+	NextPage      int            `json:"next_page"`
+}

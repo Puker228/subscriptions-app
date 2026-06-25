@@ -2,6 +2,8 @@ package subscriptions
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/Puker228/subscriptions-app/internal/db"
 	"github.com/google/uuid"
@@ -9,13 +11,105 @@ import (
 )
 
 type Repository struct {
-	q *db.Queries
+	conn db.DBTX
+	q    *db.Queries
 }
 
 func NewRepository(conn db.DBTX) *Repository {
 	return &Repository{
-		q: db.New(conn),
+		conn: conn,
+		q:    db.New(conn),
 	}
+}
+
+func (r *Repository) List(ctx context.Context, p ListParams) (ListResult, error) {
+	if p.PageSize <= 0 {
+		p.PageSize = 10
+	}
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+
+	sortCol := "start_date"
+	switch p.Sort {
+	case "service_name", "price", "start_date", "end_date":
+		sortCol = p.Sort
+	}
+	sortOrder := "DESC"
+	if strings.ToUpper(p.Order) == "ASC" {
+		sortOrder = "ASC"
+	}
+
+	filters := []string{"1 = 1"}
+	args := []any{}
+	argPos := 1
+	if p.ServiceName != "" {
+		filters = append(filters, fmt.Sprintf("service_name ILIKE $%d", argPos))
+		args = append(args, "%"+p.ServiceName+"%")
+		argPos++
+	}
+	if p.UserID != uuid.Nil {
+		filters = append(filters, fmt.Sprintf("user_id = $%d", argPos))
+		args = append(args, uuidToPgtype(p.UserID))
+		argPos++
+	}
+	whereClause := strings.Join(filters, " AND ")
+
+	var total int64
+	countQuery := fmt.Sprintf(`
+		SELECT COUNT(*)
+		FROM subscriptions
+		WHERE %s
+	`, whereClause)
+	if err := r.conn.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return ListResult{}, err
+	}
+
+	query := fmt.Sprintf(`
+		SELECT id, service_name, price, user_id, start_date, end_date
+		FROM subscriptions
+		WHERE %s
+		ORDER BY %s %s
+		LIMIT $%d OFFSET $%d
+	`, whereClause, sortCol, sortOrder, argPos, argPos+1)
+
+	offset := (p.Page - 1) * p.PageSize
+	args = append(args, p.PageSize, offset)
+	rows, err := r.conn.Query(ctx, query, args...)
+	if err != nil {
+		return ListResult{}, err
+	}
+	defer rows.Close()
+
+	subscriptions := make([]Subscription, 0)
+	for rows.Next() {
+		sub, err := scanSubscription(rows)
+		if err != nil {
+			return ListResult{}, err
+		}
+		subscriptions = append(subscriptions, sub)
+	}
+	if err := rows.Err(); err != nil {
+		return ListResult{}, err
+	}
+
+	totalCount := int(total)
+	totalPages := (totalCount + p.PageSize - 1) / p.PageSize
+	if totalPages == 0 {
+		totalPages = 1
+	}
+
+	return ListResult{
+		Subscriptions: subscriptions,
+		Total:         totalCount,
+		Page:          p.Page,
+		PageSize:      p.PageSize,
+		TotalPages:    totalPages,
+		HasPrev:       p.Page > 1,
+		HasNext:       p.Page < totalPages,
+		PrevPage:      p.Page - 1,
+		NextPage:      p.Page + 1,
+	}, nil
 }
 
 func (r *Repository) Create(ctx context.Context, s Subscription) error {
@@ -90,6 +184,39 @@ func (r *Repository) Update(ctx context.Context, s Subscription) error {
 func (r *Repository) Delete(ctx context.Context, sID uuid.UUID) error {
 	err := r.q.DeleteSubscription(ctx, uuidToPgtype(sID))
 	return err
+}
+
+type subscriptionScanner interface {
+	Scan(dest ...any) error
+}
+
+func scanSubscription(scanner subscriptionScanner) (Subscription, error) {
+	var (
+		id          pgtype.UUID
+		serviceName string
+		price       int32
+		userID      pgtype.UUID
+		startDate   pgtype.Timestamptz
+		endDate     pgtype.Date
+	)
+
+	if err := scanner.Scan(&id, &serviceName, &price, &userID, &startDate, &endDate); err != nil {
+		return Subscription{}, err
+	}
+
+	sub := Subscription{
+		ID:          uuid.UUID(id.Bytes),
+		ServiceName: serviceName,
+		Price:       int(price),
+		UserID:      uuid.UUID(userID.Bytes),
+		StartDate:   startDate.Time,
+	}
+	if endDate.Valid {
+		end := endDate.Time
+		sub.EndDate = &end
+	}
+
+	return sub, nil
 }
 
 func uuidToPgtype(id uuid.UUID) pgtype.UUID {
