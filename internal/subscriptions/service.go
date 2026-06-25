@@ -3,6 +3,7 @@ package subscriptions
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -19,6 +20,8 @@ var (
 	ErrEmptyServiceName = errors.New("service name is required")
 	ErrInvalidPrice     = errors.New("price must be greater than zero")
 	ErrInvalidUserID    = errors.New("user id is required")
+	ErrEmptyStartDate   = errors.New("start_date is required")
+	ErrInvalidDate      = errors.New("date must be in MM-YYYY format")
 )
 
 func (s *Service) List(ctx context.Context, p ListParams) (ListResult, error) {
@@ -85,5 +88,27 @@ func validateSubscription(sub Subscription) error {
 		return ErrInvalidPrice
 	}
 
+	if sub.StartDate == "" {
+		return ErrEmptyStartDate
+	}
+
+	if _, err := parseDate(sub.StartDate); err != nil {
+		return ErrInvalidDate
+	}
+
+	if sub.EndDate != nil {
+		if _, err := parseDate(*sub.EndDate); err != nil {
+			return ErrInvalidDate
+		}
+	}
+
 	return nil
+}
+
+func parseDate(value string) (time.Time, error) {
+	return time.Parse("01-2006", value)
+}
+
+func formatDate(value time.Time) string {
+	return value.Format("01-2006")
 }

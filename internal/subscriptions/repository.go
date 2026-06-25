@@ -115,19 +115,29 @@ func (r *Repository) List(ctx context.Context, p ListParams) (ListResult, error)
 func (r *Repository) Create(ctx context.Context, s Subscription) error {
 	endDate := pgtype.Date{}
 	if s.EndDate != nil {
+		parsedEndDate, err := parseDate(*s.EndDate)
+		if err != nil {
+			return err
+		}
+
 		endDate = pgtype.Date{
-			Time:  *s.EndDate,
+			Time:  parsedEndDate,
 			Valid: true,
 		}
 	}
 
-	err := r.q.CreateSubscription(ctx, db.CreateSubscriptionParams{
+	startDate, err := parseDate(s.StartDate)
+	if err != nil {
+		return err
+	}
+
+	err = r.q.CreateSubscription(ctx, db.CreateSubscriptionParams{
 		ID:          uuidToPgtype(s.ID),
 		ServiceName: s.ServiceName,
 		Price:       int32(s.Price),
 		UserID:      uuidToPgtype(s.UserID),
 		StartDate: pgtype.Timestamptz{
-			Time:  s.StartDate,
+			Time:  startDate,
 			Valid: true,
 		},
 		EndDate: endDate,
@@ -147,11 +157,12 @@ func (r *Repository) GetOneByID(ctx context.Context, sID uuid.UUID) (Subscriptio
 		ServiceName: s.ServiceName,
 		Price:       int(s.Price),
 		UserID:      uuid.UUID(s.UserID.Bytes),
-		StartDate:   s.StartDate.Time,
+		StartDate:   formatDate(s.StartDate.Time),
 	}
 
 	if s.EndDate.Valid {
-		subscription.EndDate = &s.EndDate.Time
+		endDate := formatDate(s.EndDate.Time)
+		subscription.EndDate = &endDate
 	}
 
 	return subscription, nil
@@ -160,19 +171,29 @@ func (r *Repository) GetOneByID(ctx context.Context, sID uuid.UUID) (Subscriptio
 func (r *Repository) Update(ctx context.Context, s Subscription) error {
 	endDate := pgtype.Date{}
 	if s.EndDate != nil {
+		parsedEndDate, err := parseDate(*s.EndDate)
+		if err != nil {
+			return err
+		}
+
 		endDate = pgtype.Date{
-			Time:  *s.EndDate,
+			Time:  parsedEndDate,
 			Valid: true,
 		}
 	}
 
-	err := r.q.UpdateSubscription(ctx, db.UpdateSubscriptionParams{
+	startDate, err := parseDate(s.StartDate)
+	if err != nil {
+		return err
+	}
+
+	err = r.q.UpdateSubscription(ctx, db.UpdateSubscriptionParams{
 		ID:          uuidToPgtype(s.ID),
 		ServiceName: s.ServiceName,
 		Price:       int32(s.Price),
 		UserID:      uuidToPgtype(s.UserID),
 		StartDate: pgtype.Timestamptz{
-			Time:  s.StartDate,
+			Time:  startDate,
 			Valid: true,
 		},
 		EndDate: endDate,
@@ -209,10 +230,10 @@ func scanSubscription(scanner subscriptionScanner) (Subscription, error) {
 		ServiceName: serviceName,
 		Price:       int(price),
 		UserID:      uuid.UUID(userID.Bytes),
-		StartDate:   startDate.Time,
+		StartDate:   formatDate(startDate.Time),
 	}
 	if endDate.Valid {
-		end := endDate.Time
+		end := formatDate(endDate.Time)
 		sub.EndDate = &end
 	}
 
