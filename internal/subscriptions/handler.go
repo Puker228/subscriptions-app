@@ -52,6 +52,34 @@ func (h *Handler) List(c *echo.Context) error {
 	return c.JSON(http.StatusOK, result)
 }
 
+func (h *Handler) Sum(c *echo.Context) error {
+	ctx := c.Request().Context()
+	p := SumParams{
+		StartDate:   c.QueryParam("start_date"),
+		EndDate:     c.QueryParam("end_date"),
+		ServiceName: c.QueryParam("service_name"),
+	}
+	if p.ServiceName == "" {
+		p.ServiceName = c.QueryParam("q")
+	}
+	if userID := c.QueryParam("user_id"); userID != "" {
+		id, err := uuid.Parse(userID)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "invalid user_id",
+			})
+		}
+		p.UserID = id
+	}
+
+	result, err := h.s.Sum(ctx, p)
+	if err != nil {
+		return h.handleError(c, err, "failed to sum subscriptions")
+	}
+
+	return c.JSON(http.StatusOK, result)
+}
+
 func (h *Handler) Create(c *echo.Context) error {
 	var sub Subscription
 
@@ -125,7 +153,7 @@ func (h *Handler) Delete(c *echo.Context) error {
 }
 
 func (h *Handler) handleError(c *echo.Context, err error, message string) error {
-	if errors.Is(err, ErrEmptyServiceName) || errors.Is(err, ErrInvalidPrice) || errors.Is(err, ErrInvalidUserID) || errors.Is(err, ErrEmptyStartDate) || errors.Is(err, ErrInvalidDate) {
+	if errors.Is(err, ErrEmptyServiceName) || errors.Is(err, ErrInvalidPrice) || errors.Is(err, ErrInvalidUserID) || errors.Is(err, ErrEmptyStartDate) || errors.Is(err, ErrEmptyEndDate) || errors.Is(err, ErrInvalidDate) || errors.Is(err, ErrInvalidPeriod) {
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": err.Error(),
 		})

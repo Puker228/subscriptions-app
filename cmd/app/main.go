@@ -49,6 +49,7 @@ func main() {
 
 	apiV1 := e.Group("/api/v1")
 	apiV1.GET("/sub", h.List)
+	apiV1.GET("/sub/sum", h.Sum)
 	apiV1.POST("/sub", h.Create)
 	apiV1.GET("/sub/:id", h.GetOneByID)
 	apiV1.PUT("/sub", h.Update)

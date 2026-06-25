@@ -21,7 +21,9 @@ var (
 	ErrInvalidPrice     = errors.New("price must be greater than zero")
 	ErrInvalidUserID    = errors.New("user id is required")
 	ErrEmptyStartDate   = errors.New("start_date is required")
+	ErrEmptyEndDate     = errors.New("end_date is required")
 	ErrInvalidDate      = errors.New("date must be in MM-YYYY format")
+	ErrInvalidPeriod    = errors.New("end_date must not be before start_date")
 )
 
 func (s *Service) List(ctx context.Context, p ListParams) (ListResult, error) {
@@ -33,6 +35,31 @@ func (s *Service) List(ctx context.Context, p ListParams) (ListResult, error) {
 	}
 
 	return s.r.List(ctx, p)
+}
+
+func (s *Service) Sum(ctx context.Context, p SumParams) (SumResult, error) {
+	if p.StartDate == "" {
+		return SumResult{}, ErrEmptyStartDate
+	}
+	if p.EndDate == "" {
+		return SumResult{}, ErrEmptyEndDate
+	}
+
+	startDate, err := parseDate(p.StartDate)
+	if err != nil {
+		return SumResult{}, ErrInvalidDate
+	}
+
+	endDate, err := parseDate(p.EndDate)
+	if err != nil {
+		return SumResult{}, ErrInvalidDate
+	}
+
+	if endDate.Before(startDate) {
+		return SumResult{}, ErrInvalidPeriod
+	}
+
+	return s.r.Sum(ctx, p)
 }
 
 func (s *Service) Create(ctx context.Context, sub Subscription) (Subscription, error) {

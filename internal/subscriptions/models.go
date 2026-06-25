@@ -31,3 +31,14 @@ type ListResult struct {
 	PrevPage      int            `json:"prev_page"`
 	NextPage      int            `json:"next_page"`
 }
+
+type SumParams struct {
+	StartDate   string
+	EndDate     string
+	UserID      uuid.UUID
+	ServiceName string
+}
+
+type SumResult struct {
+	Total int `json:"total"`
+}

@@ -112,6 +112,59 @@ func (r *Repository) List(ctx context.Context, p ListParams) (ListResult, error)
 	}, nil
 }
 
+func (r *Repository) Sum(ctx context.Context, p SumParams) (SumResult, error) {
+	startDate, err := parseDate(p.StartDate)
+	if err != nil {
+		return SumResult{}, err
+	}
+	endDate, err := parseDate(p.EndDate)
+	if err != nil {
+		return SumResult{}, err
+	}
+
+	filters := []string{}
+	args := []any{}
+	argPos := 1
+
+	filters = append(filters, fmt.Sprintf("start_date <= $%d", argPos))
+	args = append(args, pgtype.Timestamptz{
+		Time:  endDate,
+		Valid: true,
+	})
+	argPos++
+
+	filters = append(filters, fmt.Sprintf("(end_date IS NULL OR end_date >= $%d)", argPos))
+	args = append(args, pgtype.Date{
+		Time:  startDate,
+		Valid: true,
+	})
+	argPos++
+
+	if p.UserID != uuid.Nil {
+		filters = append(filters, fmt.Sprintf("user_id = $%d", argPos))
+		args = append(args, uuidToPgtype(p.UserID))
+		argPos++
+	}
+	if p.ServiceName != "" {
+		filters = append(filters, fmt.Sprintf("service_name ILIKE $%d", argPos))
+		args = append(args, "%"+p.ServiceName+"%")
+		argPos++
+	}
+
+	query := fmt.Sprintf(`
+		SELECT COALESCE(SUM(price), 0)
+		FROM subscriptions
+		WHERE %s
+	`, strings.Join(filters, " AND "))
+
+	var total int64
+	if err := r.conn.QueryRow(ctx, query, args...).Scan(&total); err != nil {
+		return SumResult{}, err
+	}
+
+	return SumResult{Total: int(total)}, nil
+}
+
 func (r *Repository) Create(ctx context.Context, s Subscription) error {
 	endDate := pgtype.Date{}
 	if s.EndDate != nil {
